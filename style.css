@@ -2,6 +2,17 @@ body{
     margin:0;
 }
 
+#item-settings{
+    display:none;
+    flex-direction: column;
+    width:300px;
+    border:solid 1px black;
+    padding: 15px;
+    position: absolute;
+    background-color:white;
+
+}
+
 #canvas-holder{
     display: flex;
     justify-content: center;

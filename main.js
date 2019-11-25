@@ -4,23 +4,32 @@ class Rect{
         this.pos = pos;
         this.dimens = {w:0,h:0};
         this.properties = {
-            strokeColor: "#ff0000",
+            strokeColor: "#000000",
+            strokeSize: 10,
             isFill: false,
             fillColor:"#000000",
+            isSelected:false,
 
         };
 
     }
     draw(){
         ctx.strokeStyle = this.properties.strokeColor;
+        ctx.lineWidth = this.properties.strokeSize;
+        console.log(ctx.strokeSize)
         ctx.beginPath();
         ctx.rect(this.pos.x, this.pos.y, this.dimens.w, this.dimens.h);
-        ctx.stroke();
+        
         if (this.properties.isFill){
             ctx.fillStyle = this.properties.fillColor;
             ctx.fill();
         }
-
+        if(this.properties.isSelected){
+            ctx.setLineDash([5])
+        }else if(!this.properties.isSelected){
+            ctx.setLineDash([])
+        }
+        ctx.stroke();
         ctx.closePath();
     }
 }
@@ -28,9 +37,19 @@ class Circle{
     constructor(pos){
         this.pos = pos;
         this.radius = 0;
+        this.properties = {
+            strokeColor: "#000000",
+            strokeSize: 1,
+            isFill: false,
+            fillColor:"#000000",
+            isSelected:false,
+
+        };
 
     }
     draw(){
+        ctx.strokeStyle = this.properties.strokeColor;
+        ctx.lineWidth = this.properties.strokeSize;
 		ctx.beginPath();
 		ctx.arc(
 			this.pos.x,
@@ -38,7 +57,17 @@ class Circle{
 			this.radius,
 			0,
 			Math.PI*2,
-		);
+        );
+        
+        if (this.properties.isFill){
+            ctx.fillStyle = this.properties.fillColor;
+            ctx.fill();
+        }
+        if(this.properties.isSelected){
+            ctx.setLineDash([5])
+        }else if(!this.properties.isSelected){
+            ctx.setLineDash([])
+        }
         ctx.stroke();
         ctx.closePath();
     }
@@ -48,6 +77,7 @@ class Circle{
 (function(){
     let canvas = document.getElementById('viewport');
     let holder = document.getElementById('canvas-holder');
+    let propertiesPanel = document.getElementById('item-settings');
     let objSelector = document.querySelectorAll('input[type=radio][name="object"]')
     ctx = canvas.getContext('2d');
     ctx.canvas.width = window.innerWidth;
@@ -55,6 +85,7 @@ class Circle{
     let mouseIsDown = false;
     let selectedItem = "Rect";
     let currObj = null;
+    let newObj = null;
     let objects = [];
     let selectedOffset = {x:0,y:0};
 
@@ -128,23 +159,41 @@ class Circle{
         });
         return foundObj;
     }
+    function displayPropertiesPanel(x,y){
+        propertiesPanel.style.display = "flex";
+        propertiesPanel.style.top = y + "px";
+        propertiesPanel.style.left = (x + 5) + "px";
+    }
+    function removePropertiesPanel(){
+        propertiesPanel.style.display = "none";
+    }
 
 
+    //CANVAS EVENT LISTENERS
     canvas.addEventListener("mousedown",e => {
         if (!mouseIsDown){
             
             mouseIsDown = true;
             switch(selectedItem){
                 case "Select":
+                    if(currObj != null){
+                        currObj.properties.isSelected = false;
+                    }
                     currObj = isMouseInsideObject(e.clientX,e.clientY);
+                    if (currObj != null){
+                        displayPropertiesPanel(e.clientX,e.clientY);
+                        currObj.properties.isSelected = true;
+                    }else{
+                        removePropertiesPanel();
+                    }
                     break;
                 case "Rect":
-                    currObj = new Rect({x:e.clientX,y:e.clientY});
-                    objects.push(currObj);
+                    newObj = new Rect({x:e.clientX,y:e.clientY});
+                    objects.push(newObj);
                     break;
                 case "Circle":
-                    currObj = new Circle({x:e.clientX,y:e.clientY});
-                    objects.push(currObj);
+                    newObj = new Circle({x:e.clientX,y:e.clientY});
+                    objects.push(newObj);
                     break;
             }
             
@@ -152,17 +201,19 @@ class Circle{
 
         }
     });
-    canvas.addEventListener("mousemove",e => {
+    document.addEventListener("mousemove",e => {
         if (mouseIsDown){
             switch(selectedItem){
                 case "Select":
-                    currObj.pos = {x:e.clientX - selectedOffset.x,y:e.clientY - selectedOffset.y};
+                    if (currObj != null){
+                        currObj.pos = {x:e.clientX - selectedOffset.x,y:e.clientY - selectedOffset.y};
+                    }
                     break;
                 case "Rect":
-                    currObj.dimens = {w:e.clientX - currObj.pos.x,h:e.clientY - currObj.pos.y};
+                    newObj.dimens = {w:e.clientX - newObj.pos.x,h:e.clientY - newObj.pos.y};
                     break;
                 case "Circle":
-                    currObj.radius = Math.abs(e.clientX - currObj.pos.x);
+                    newObj.radius = Math.abs(e.clientX - newObj.pos.x);
                     break;
             }
         }
@@ -173,4 +224,25 @@ class Circle{
         }
         
     });
+
+
+    //PROPERTIES PANEL EVENTS
+    let strokeColor = document.getElementById("stroke-color");
+    let strokeSize = document.getElementById("stroke-size");
+    let letFill = document.getElementById("fill");
+    let fillColor = document.getElementById("fill-color");
+
+    strokeColor.addEventListener("input", e => {
+        currObj.properties.strokeColor = e.target.value;
+    });
+    strokeSize.addEventListener("input", e => {
+        currObj.properties.strokeSize = parseInt(e.target.value);
+    })
+    letFill.addEventListener("input",e => {
+        currObj.properties.isFill = e.target.checked;
+    })
+    fillColor.addEventListener("input",e => {
+        currObj.properties.fillColor = e.target.value;
+    })
+
 })();
