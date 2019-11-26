@@ -5,7 +5,7 @@ class Rect{
         this.dimens = {w:0,h:0};
         this.properties = {
             strokeColor: "#000000",
-            strokeSize: 10,
+            strokeSize: 1,
             isFill: false,
             fillColor:"#000000",
             isSelected:false,
@@ -16,7 +16,6 @@ class Rect{
     draw(){
         ctx.strokeStyle = this.properties.strokeColor;
         ctx.lineWidth = this.properties.strokeSize;
-        console.log(ctx.strokeSize)
         ctx.beginPath();
         ctx.rect(this.pos.x, this.pos.y, this.dimens.w, this.dimens.h);
         
@@ -31,6 +30,21 @@ class Rect{
         }
         ctx.stroke();
         ctx.closePath();
+    }
+    detectEdges(x,y){
+        if (this.pos.x > x - 10 && this.pos.x < x + 10 && this.pos.y < y && this.dimens.h + this.pos.y > y){
+            console.log("???")
+            return "left"
+        }
+        if (this.dimens.w + this.pos.x > x - 10 && this.dimens.w + this.pos.x < x + 10&& this.pos.y < y && this.dimens.h + this.pos.y > y){
+            return "right"
+        }
+        if (this.pos.y > y - 10 && this.pos.y < y + 10 && this.pos.x < x && this.dimens.w + this.pos.x > x){
+            return "top"
+        }
+        if (this.dimens.h + this.pos.y > y - 10 && this.dimens.h + this.pos.y < y + 10 && this.pos.x < x && this.dimens.w + this.pos.x > x){
+            return "bottom"
+        }
     }
 }
 class Circle{
@@ -71,6 +85,12 @@ class Circle{
         ctx.stroke();
         ctx.closePath();
     }
+    detectEdges(x,y){
+        let value = Math.sqrt((x-this.pos.x)*(x-this.pos.x) + (y-this.pos.y)*(y-this.pos.y));
+        if (value > this.radius - 10 && value < this.radius + 10){
+            return "circle"
+        }
+    }
 }
 
 
@@ -84,10 +104,12 @@ class Circle{
     ctx.canvas.height = window.innerHeight * .9;
     let mouseIsDown = false;
     let selectedItem = "Rect";
+    let resizeObject = false;
     let currObj = null;
-    let newObj = null;
+    let hitSide = null;
     let objects = [];
     let selectedOffset = {x:0,y:0};
+    let mouseDownPos = {x:0,y:0};
 
 
     function draw(){
@@ -179,6 +201,23 @@ class Circle{
                     if(currObj != null){
                         currObj.properties.isSelected = false;
                     }
+                    hitSide = null;
+                    for (let i = 0; i < objects.length; i++) {
+                        const obj = objects[i];
+                        hitSide = obj.detectEdges(e.clientX,e.clientY);
+                        if(hitSide != null){
+                            currObj = obj;
+                            currObj.properties.isSelected = true;
+                            resizeObject = true;
+                            mouseDownPos = {x:e.clientX,y:e.clientY};
+                            break;
+                        }
+                    }
+                    if (hitSide != null){
+                        break;
+                    };
+                    resizeObject = false;
+
                     currObj = isMouseInsideObject(e.clientX,e.clientY);
                     if (currObj != null){
                         displayPropertiesPanel(e.clientX,e.clientY);
@@ -188,12 +227,12 @@ class Circle{
                     }
                     break;
                 case "Rect":
-                    newObj = new Rect({x:e.clientX,y:e.clientY});
-                    objects.push(newObj);
+                    currObj = new Rect({x:e.clientX,y:e.clientY});
+                    objects.push(currObj);
                     break;
                 case "Circle":
-                    newObj = new Circle({x:e.clientX,y:e.clientY});
-                    objects.push(newObj);
+                    currObj = new Circle({x:e.clientX,y:e.clientY});
+                    objects.push(currObj);
                     break;
             }
             
@@ -201,19 +240,54 @@ class Circle{
 
         }
     });
+    function resizeCurrentObject(x,y){
+        let mouseDiffX = (x - mouseDownPos.x);
+        let mouseDiffY = (y - mouseDownPos.y);
+        if(hitSide === "right"){
+            currObj.dimens.w += mouseDiffX;
+
+        }
+        if(hitSide === "left"){
+            currObj.pos.x += mouseDiffX;
+            currObj.dimens.w -= mouseDiffX;
+            
+        }
+        if(hitSide === "top"){
+            currObj.pos.y += mouseDiffY;
+            currObj.dimens.h -= mouseDiffY;
+            
+        }
+        if(hitSide === "bottom"){
+            currObj.dimens.h += mouseDiffY;
+            
+        }
+        if (hitSide === "circle"){
+            currObj.radius += mouseDiffX;
+            if(currObj.radius < 1){
+                currObj.radius = 1;
+            }
+            
+            
+        }
+        mouseDownPos = {x:x,y:y};
+    }
     document.addEventListener("mousemove",e => {
         if (mouseIsDown){
             switch(selectedItem){
                 case "Select":
+                    if(resizeObject){
+                        resizeCurrentObject(e.clientX,e.clientY)
+                        break;
+                    }
                     if (currObj != null){
                         currObj.pos = {x:e.clientX - selectedOffset.x,y:e.clientY - selectedOffset.y};
                     }
                     break;
                 case "Rect":
-                    newObj.dimens = {w:e.clientX - newObj.pos.x,h:e.clientY - newObj.pos.y};
+                    currObj.dimens = {w:e.clientX - currObj.pos.x,h:e.clientY - currObj.pos.y};
                     break;
                 case "Circle":
-                    newObj.radius = Math.abs(e.clientX - newObj.pos.x);
+                    currObj.radius = Math.abs(e.clientX - currObj.pos.x);
                     break;
             }
         }
