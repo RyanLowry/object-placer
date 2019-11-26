@@ -27,5 +27,49 @@ body{
     display:flex;
     flex-direction: row;
     justify-content: space-evenly;
-    
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 22px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
+  
+#canvas-objects label {
+    display: block;
+    position: relative;
+    padding: 20px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 22px;
+    border:solid 1px black;
+  }
+  
+  #canvas-objects label input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+    display:none;
+  }
+  .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* On mouse-over, add a grey background color */
+  #canvas-objects label:hover input ~ .checkmark {
+    background-color: #7a7a7a44;
+  }
+  
+  /* When the checkbox is checked, add a blue background */
+  #canvas-objects label input:checked ~ .checkmark {
+    background-color: #0d227e99;
+  }
