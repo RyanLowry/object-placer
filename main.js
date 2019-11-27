@@ -33,7 +33,6 @@ class Rect{
     }
     detectEdges(x,y){
         if (this.pos.x > x - 10 && this.pos.x < x + 10 && this.pos.y < y && this.dimens.h + this.pos.y > y){
-            console.log("???")
             return "left"
         }
         if (this.dimens.w + this.pos.x > x - 10 && this.dimens.w + this.pos.x < x + 10&& this.pos.y < y && this.dimens.h + this.pos.y > y){
@@ -45,6 +44,48 @@ class Rect{
         if (this.dimens.h + this.pos.y > y - 10 && this.dimens.h + this.pos.y < y + 10 && this.pos.x < x && this.dimens.w + this.pos.x > x){
             return "bottom"
         }
+    }
+    resize(x,y,hit){
+        if(hit === "right"){
+            this.dimens.w += x;
+
+        }
+        if(hit === "left"){
+            this.pos.x += x;
+            this.dimens.w -= x;
+            
+        }
+        if(hit === "top"){
+            this.pos.y += y;
+            this.dimens.h -= y;
+            
+        }
+        if(hit === "bottom"){
+            this.dimens.h += y;
+            
+        }
+    }
+    checkIfInside(x,y){
+        //total area of rect
+        let A = (this.area(this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h))+
+            this.area(this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h),(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h)));
+        //areas related to mouse click
+        let A1 = this.area(x,y,this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y);
+        let A4 = this.area(x,y,this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h));
+        let A2 = this.area(x,y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h));
+        let A3 = this.area(x,y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h),this.pos.x,(this.pos.y + this.dimens.h));
+
+        if (A === A1 + A2 + A3 + A4 && A != 0){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    //HELPER FUNCTION
+    area(x1,y1,x2,y2,x3,y3){
+        return Math.abs((x1 * (y2 - y3) + 
+        x2 * (y3 - y1) + 
+        x3 * (y1 - y2)) / 2);
     }
 }
 class Circle{
@@ -91,214 +132,163 @@ class Circle{
             return "circle"
         }
     }
+    resize(x,y,hit){
+        this.radius += x;
+        if(this.radius < 1){
+            this.radius = 1;
+        }
+    }
+    checkIfInside(x,y){
+        if (Math.sqrt((x-this.pos.x)*(x-this.pos.x) + (y-this.pos.y)*(y-this.pos.y)) < this.radius){
+            return true;
+        }else{
+            return false;
+        }
+    }
+}
+
+class CanvasManager{
+    constructor(){
+        this.objects = [];
+        this.currObj = null;
+        this.selectedItem = "Rect";
+        this.selectedOffset = {x:0,y:0};
+        this.currMousePos = {x:0,y:0};
+        this.mouseDownPos = {x:0,y:0};
+        this.mouseIsDown = false;
+        this.hitSide = null;
+    }
+    update(){
+        this.objects.forEach(obj => {
+            obj.draw();
+        });
+    }
+    detectObjects(x,y){
+        let foundObj = null;
+        this.objects.forEach(obj => {
+            if(obj.checkIfInside(x,y)){
+                foundObj = obj
+                this.selectedOffset = {x:x-obj.pos.x,y:y-obj.pos.y};
+            };
+        });
+        return foundObj;
+    }
+    processMouseDown(x,y){
+        if (!this.mouseIsDown){
+            this.mouseIsDown = true;
+            switch(this.selectedItem){
+                case "Select":
+                    if(this.currObj != null){
+                        this.currObj.properties.isSelected = false;
+                    }
+                    this.hitSide = null;
+                    for (let i = 0; i < this.objects.length; i++) {
+                        const obj = this.objects[i];
+                        this.hitSide = obj.detectEdges(x,y);
+                        if(this.hitSide != null){
+                            this.currObj = obj;
+                            this.currObj.properties.isSelected = true;
+                            this.resizeObject = true;
+                            this.currMousePos = {x:x,y:y};
+                            break;
+                        }
+                    }
+                    if (this.hitSide != null){
+                        break;
+                    };
+                    this.resizeObject = false;
+
+                    this.currObj = this.detectObjects(x,y);
+                    if (this.currObj != null){
+                        this.mouseDownPos = {x:x,y:y};
+                        this.currObj.properties.isSelected = true;
+                    }
+                    removePropertiesPanel();
+                    break;
+                case "Rect":
+                    this.currObj = new Rect({x:x,y:y});
+                    this.objects.push(this.currObj);
+                    break;
+                case "Circle":
+                    this.currObj = new Circle({x:x,y:y});
+                    this.objects.push(this.currObj);
+                    break;
+            }
+            
+
+
+        }
+    }
+    processMouseMove(x,y){
+        if (this.mouseIsDown){
+            
+            switch(this.selectedItem){
+                case "Select":
+                    if(this.resizeObject){
+                        let mouseDiffX = (x - this.currMousePos.x);
+                        let mouseDiffY = (y - this.currMousePos.y);
+                        this.currObj.resize(mouseDiffX,mouseDiffY,this.hitSide);
+                        break;
+                    }
+                    if (this.currObj != null){
+                        this.currObj.pos = {x:x - this.selectedOffset.x,y:y - this.selectedOffset.y};
+                    }
+                    break;
+                case "Rect":
+                    this.currObj.dimens = {w:x - this.currObj.pos.x,h:y - this.currObj.pos.y};
+                    break;
+                case "Circle":
+                    this.currObj.radius = Math.abs(x - this.currObj.pos.x);
+                    break;
+            }
+            this.currMousePos = {x:x,y:y};
+        }
+    }
+    processMouseUp(x,y){
+        if (this.mouseIsDown){
+            this.mouseIsDown = false;
+            console.log(this.mouseDownPos);
+            console.log({x:x,y:y})
+            if(this.mouseDownPos.x === x && this.mouseDownPos.y === y){
+                displayPropertiesPanel(x,y);
+            }
+        }
+    }
 }
 
 
 (function(){
-    let canvas = document.getElementById('viewport');
+    canvas = document.getElementById('viewport');
     let holder = document.getElementById('canvas-holder');
     let propertiesPanel = document.getElementById('item-settings');
     let objSelector = document.querySelectorAll('input[type=radio][name="object"]')
     ctx = canvas.getContext('2d');
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight * .9;
-    let mouseIsDown = false;
-    let selectedItem = "Rect";
-    let resizeObject = false;
-    let currObj = null;
-    let hitSide = null;
-    let objects = [];
-    let selectedOffset = {x:0,y:0};
-    let mouseDownPos = {x:0,y:0};
+    let canMan = new CanvasManager();
 
 
     function draw(){
-        ctx.clearRect(0,0,canvas.width,canvas.height); 
-        objects.forEach(obj => {
-            obj.draw();
-        });
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        canMan.update();
         requestAnimationFrame(draw);
     }
     draw();
 
     objSelector.forEach(radio => {
         radio.addEventListener('click',e =>{
-            selectedItem = e.target.value;
+            canMan.selectedItem = e.target.value;
         });
     });
-
-    // find area of triangle
-    function area(x1,y1,x2,y2,x3,y3){
-        return Math.abs((x1 * (y2 - y3) + 
-                    x2 * (y3 - y1) + 
-                    x3 * (y1 - y2)) / 2);
-    }
-
-    function checkRect(x,y,obj){
-            //total area of rect
-            A = (area(obj.pos.x,obj.pos.y,(obj.pos.x + obj.dimens.w),obj.pos.y,(obj.pos.x + obj.dimens.w),(obj.pos.y + obj.dimens.h))+
-                area(obj.pos.x,obj.pos.y,obj.pos.x,(obj.pos.y + obj.dimens.h),(obj.pos.x + obj.dimens.w),(obj.pos.y + obj.dimens.h)));
-            //areas related to mouse click
-            A1 = area(x,y,obj.pos.x,obj.pos.y,(obj.pos.x + obj.dimens.w),obj.pos.y);
-            A4 = area(x,y,obj.pos.x,obj.pos.y,obj.pos.x,(obj.pos.y + obj.dimens.h));
-            A2 = area(x,y,(obj.pos.x + obj.dimens.w),obj.pos.y,(obj.pos.x + obj.dimens.w),(obj.pos.y + obj.dimens.h));
-            A3 = area(x,y,(obj.pos.x + obj.dimens.w),(obj.pos.y + obj.dimens.h),obj.pos.x,(obj.pos.y + obj.dimens.h));
-
-            if (A === A1 + A2 + A3 + A4 && A != 0){
-                return true;
-            }else{
-                return false;
-            }
-    }
-    function checkCirc(x,y,obj){
-        if (Math.sqrt((x-obj.pos.x)*(x-obj.pos.x) + (y-obj.pos.y)*(y-obj.pos.y)) < obj.radius){
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-
-
-    function isMouseInsideObject(x,y){
-        foundObj = null;
-        objects.forEach(obj => {
-            switch(obj.constructor.name){
-                case "Rect":
-                    if (checkRect(x,y,obj)){
-                        foundObj = obj;
-                        selectedOffset = {x:x-obj.pos.x,y:y-obj.pos.y};
-                    }
-                    break;
-                case "Circle":
-                    if (checkCirc(x,y,obj)){
-                        foundObj = obj;
-                        selectedOffset = {x:x-obj.pos.x,y:y-obj.pos.y};
-                    }
-                    break;
-            }
-
-        });
-        return foundObj;
-    }
-    function displayPropertiesPanel(x,y){
+    // GLOBAL FUNCTIONS TO HANDLE PROPERTIES PANEL
+    window.displayPropertiesPanel = function(x,y){
         propertiesPanel.style.display = "flex";
         propertiesPanel.style.top = y + "px";
         propertiesPanel.style.left = (x + 5) + "px";
     }
-    function removePropertiesPanel(){
+    window.removePropertiesPanel = function(){
         propertiesPanel.style.display = "none";
     }
-
-
-    //CANVAS EVENT LISTENERS
-    canvas.addEventListener("mousedown",e => {
-        if (!mouseIsDown){
-            
-            mouseIsDown = true;
-            switch(selectedItem){
-                case "Select":
-                    if(currObj != null){
-                        currObj.properties.isSelected = false;
-                    }
-                    hitSide = null;
-                    for (let i = 0; i < objects.length; i++) {
-                        const obj = objects[i];
-                        hitSide = obj.detectEdges(e.clientX,e.clientY);
-                        if(hitSide != null){
-                            currObj = obj;
-                            currObj.properties.isSelected = true;
-                            resizeObject = true;
-                            mouseDownPos = {x:e.clientX,y:e.clientY};
-                            break;
-                        }
-                    }
-                    if (hitSide != null){
-                        break;
-                    };
-                    resizeObject = false;
-
-                    currObj = isMouseInsideObject(e.clientX,e.clientY);
-                    if (currObj != null){
-                        displayPropertiesPanel(e.clientX,e.clientY);
-                        currObj.properties.isSelected = true;
-                    }else{
-                        removePropertiesPanel();
-                    }
-                    break;
-                case "Rect":
-                    currObj = new Rect({x:e.clientX,y:e.clientY});
-                    objects.push(currObj);
-                    break;
-                case "Circle":
-                    currObj = new Circle({x:e.clientX,y:e.clientY});
-                    objects.push(currObj);
-                    break;
-            }
-            
-
-
-        }
-    });
-    function resizeCurrentObject(x,y){
-        let mouseDiffX = (x - mouseDownPos.x);
-        let mouseDiffY = (y - mouseDownPos.y);
-        if(hitSide === "right"){
-            currObj.dimens.w += mouseDiffX;
-
-        }
-        if(hitSide === "left"){
-            currObj.pos.x += mouseDiffX;
-            currObj.dimens.w -= mouseDiffX;
-            
-        }
-        if(hitSide === "top"){
-            currObj.pos.y += mouseDiffY;
-            currObj.dimens.h -= mouseDiffY;
-            
-        }
-        if(hitSide === "bottom"){
-            currObj.dimens.h += mouseDiffY;
-            
-        }
-        if (hitSide === "circle"){
-            currObj.radius += mouseDiffX;
-            if(currObj.radius < 1){
-                currObj.radius = 1;
-            }
-            
-            
-        }
-        mouseDownPos = {x:x,y:y};
-    }
-    document.addEventListener("mousemove",e => {
-        if (mouseIsDown){
-            switch(selectedItem){
-                case "Select":
-                    if(resizeObject){
-                        resizeCurrentObject(e.clientX,e.clientY)
-                        break;
-                    }
-                    if (currObj != null){
-                        currObj.pos = {x:e.clientX - selectedOffset.x,y:e.clientY - selectedOffset.y};
-                    }
-                    break;
-                case "Rect":
-                    currObj.dimens = {w:e.clientX - currObj.pos.x,h:e.clientY - currObj.pos.y};
-                    break;
-                case "Circle":
-                    currObj.radius = Math.abs(e.clientX - currObj.pos.x);
-                    break;
-            }
-        }
-    });
-    canvas.addEventListener("mouseup",e => {
-        if (mouseIsDown){
-            mouseIsDown = false;
-        }
-        
-    });
-
 
     //PROPERTIES PANEL EVENTS
     let strokeColor = document.getElementById("stroke-color");
@@ -307,16 +297,28 @@ class Circle{
     let fillColor = document.getElementById("fill-color");
 
     strokeColor.addEventListener("input", e => {
-        currObj.properties.strokeColor = e.target.value;
+        canMan.currObj.properties.strokeColor = e.target.value;
     });
     strokeSize.addEventListener("input", e => {
-        currObj.properties.strokeSize = parseInt(e.target.value);
+        canMan.currObj.properties.strokeSize = parseInt(e.target.value);
     })
     letFill.addEventListener("input",e => {
-        currObj.properties.isFill = e.target.checked;
+        canMan.currObj.properties.isFill = e.target.checked;
     })
     fillColor.addEventListener("input",e => {
-        currObj.properties.fillColor = e.target.value;
+        canMan.currObj.properties.fillColor = e.target.value;
     })
+
+    //CANVAS EVENT LISTENERS
+    canvas.addEventListener("mousedown",e => {
+        canMan.processMouseDown(e.clientX,e.clientY)
+        
+    });
+    document.addEventListener("mousemove",e => {
+        canMan.processMouseMove(e.clientX,e.clientY);
+    });
+    canvas.addEventListener("mouseup",e => {
+        canMan.processMouseUp(e.clientX,e.clientY);
+    });
 
 })();
