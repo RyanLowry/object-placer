@@ -1,3 +1,101 @@
+// TODO : create base classes to handle redundancy in functions.
+
+// A placeholder helper class, resorting for more math-based solutions
+class Helper{
+    static area(x1,y1,x2,y2,x3,y3){
+        return Math.abs((x1 * (y2 - y3) + 
+        x2 * (y3 - y1) + 
+        x3 * (y1 - y2)) / 2);
+    }
+    static lerp (a,b,c){
+        return (a + c * (b-a));
+    };
+}
+
+class Line{
+    //TODO: Add ability to connect multiple points to line
+    constructor(pos){
+        this.pos = pos;
+         // {x,y}
+        this.points = [];
+        this.points.push(this.pos);
+        this.currPoint = null;
+        this.properties = {
+            strokeColor: "#000000",
+            strokeSize: 1,
+            isFill: false,
+            fillColor:"#000000",
+            isSelected:false,
+
+        };
+    }
+    draw(){
+        ctx.strokeStyle = this.properties.strokeColor;
+        ctx.lineWidth = this.properties.strokeSize;
+        ctx.beginPath();
+        for (let i = 0; i < this.points.length; i++) {
+            const point = this.points[i];
+            
+            if (i === 0){
+                ctx.moveTo(point.x,point.y);
+            }else{
+                ctx.moveTo(this.points[i-1].x,this.points[i-1].y);
+                ctx.lineTo(point.x,point.y)
+
+                if(this.properties.isSelected){
+                    ctx.setLineDash([5])
+                }else if(!this.properties.isSelected){
+                    ctx.setLineDash([])
+                }
+            }
+
+            
+            
+        }
+        ctx.stroke();
+        ctx.closePath();
+
+    }
+    addNewPoint(x,y){
+        this.points.push({x:x,y:y})
+    }
+    updatePreviousPoint(x,y){
+        this.points[this.points.length - 1] = {x:x,y:y};
+    }
+    checkIfInside(x,y){
+        // finds distance between mouse and line
+        const distX = this.points[this.points.length - 1].x - this.pos.x;
+        const distY = this.points[this.points.length - 1].y - this.pos.y;
+        const t = ((x - this.pos.x) * distX + (y - this.pos.y) * distY) / (distX * distX + distY * distY);
+        const lineX = Helper.lerp(this.pos.x,this.points[this.points.length - 1].x,t);
+        const lineY = Helper.lerp(this.pos.y,this.points[this.points.length - 1].y,t);
+        const dx = x - lineX;
+        const dy = y - lineY;
+        const dist = Math.abs(Math.sqrt(dx * dx + dy * dy));
+        if (dist < 10){
+            return true;
+        }
+        return false;
+        
+    }
+    //TODO: make lines moveable
+    detectEdges(x,y){
+        let caughtObj = null;
+        for (let i = 0; i < this.points.length; i++) {
+            const point = this.points[i];
+            if (Math.sqrt((x-point.x)*(x-point.x) + (y-point.y)*(y-point.y)) < 10){
+                this.currPoint = this.points[i];
+                caughtObj = true;
+            }
+        }
+        return caughtObj;
+    }
+    resize(x,y){
+        this.currPoint.x += x;
+        this.currPoint.y += y;
+    }
+}
+
 
 class Rect{
     constructor(pos){
@@ -67,13 +165,13 @@ class Rect{
     }
     checkIfInside(x,y){
         //total area of rect
-        let A = (this.area(this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h))+
-            this.area(this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h),(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h)));
+        let A = (Helper.area(this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h))+
+            Helper.area(this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h),(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h)));
         //areas related to mouse click
-        let A1 = this.area(x,y,this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y);
-        let A4 = this.area(x,y,this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h));
-        let A2 = this.area(x,y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h));
-        let A3 = this.area(x,y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h),this.pos.x,(this.pos.y + this.dimens.h));
+        let A1 = Helper.area(x,y,this.pos.x,this.pos.y,(this.pos.x + this.dimens.w),this.pos.y);
+        let A4 = Helper.area(x,y,this.pos.x,this.pos.y,this.pos.x,(this.pos.y + this.dimens.h));
+        let A2 = Helper.area(x,y,(this.pos.x + this.dimens.w),this.pos.y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h));
+        let A3 = Helper.area(x,y,(this.pos.x + this.dimens.w),(this.pos.y + this.dimens.h),this.pos.x,(this.pos.y + this.dimens.h));
 
         if (A === A1 + A2 + A3 + A4 && A != 0){
             return true;
@@ -81,12 +179,7 @@ class Rect{
             return false;
         }
     }
-    //HELPER FUNCTION
-    area(x1,y1,x2,y2,x3,y3){
-        return Math.abs((x1 * (y2 - y3) + 
-        x2 * (y3 - y1) + 
-        x3 * (y1 - y2)) / 2);
-    }
+
 }
 class Circle{
     constructor(pos){
@@ -213,6 +306,11 @@ class CanvasManager{
                     this.currObj = new Circle({x:x,y:y});
                     this.objects.push(this.currObj);
                     break;
+                case "Line":
+                    this.currObj = new Line({x:x,y:y});
+                    this.currObj.addNewPoint(x,y);
+                    this.objects.push(this.currObj);
+                    break;
             }
             
 
@@ -240,6 +338,9 @@ class CanvasManager{
                 case "Circle":
                     this.currObj.radius = Math.abs(x - this.currObj.pos.x);
                     break;
+                case "Line":
+                    this.currObj.updatePreviousPoint(x,y)
+
             }
             this.currMousePos = {x:x,y:y};
         }
@@ -247,11 +348,10 @@ class CanvasManager{
     processMouseUp(x,y){
         if (this.mouseIsDown){
             this.mouseIsDown = false;
-            console.log(this.mouseDownPos);
-            console.log({x:x,y:y})
-            if(this.mouseDownPos.x === x && this.mouseDownPos.y === y){
-                displayPropertiesPanel(x,y);
+            if (this.mouseDownPos.x === x && this.mouseDownPos.y === y){
+            displayPropertiesPanel(x,y);
             }
+            
         }
     }
 }
