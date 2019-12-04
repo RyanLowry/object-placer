@@ -19,6 +19,8 @@ class Line{
          // {x,y}
         this.points = [];
         this.points.push(this.pos);
+        this.pos = this.points[0];
+        this.distance = 0;
         this.currPoint = null;
         this.properties = {
             strokeColor: "#000000",
@@ -78,7 +80,6 @@ class Line{
         return false;
         
     }
-    //TODO: make lines moveable
     detectEdges(x,y){
         let caughtObj = null;
         for (let i = 0; i < this.points.length; i++) {
@@ -93,6 +94,13 @@ class Line{
     resize(x,y){
         this.currPoint.x += x;
         this.currPoint.y += y;
+    }
+    //current quick solution, will cut / add half depending on where clicked, click in middle to keep proper distance.
+    //TODO: Track distance between points, and make movement support multiple points.
+    move(x,y,offset){
+        this.points[1] = {x:x + offset.x,y:y + offset.y};
+        this.pos = {x:x - offset.x,y:y - offset.y};
+        this.points[0] = this.pos;
     }
 }
 
@@ -179,6 +187,9 @@ class Rect{
             return false;
         }
     }
+    move(x,y,offset){
+        this.pos = {x:x - offset.x,y:y - offset.y};
+    }
 
 }
 class Circle{
@@ -237,6 +248,9 @@ class Circle{
         }else{
             return false;
         }
+    }
+    move(x,y,offset){
+        this.pos = {x:x - offset.x,y:y - offset.y};
     }
 }
 
@@ -329,7 +343,8 @@ class CanvasManager{
                         break;
                     }
                     if (this.currObj != null){
-                        this.currObj.pos = {x:x - this.selectedOffset.x,y:y - this.selectedOffset.y};
+                        this.currObj.move(x,y,this.selectedOffset);
+                        
                     }
                     break;
                 case "Rect":
