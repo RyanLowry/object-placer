@@ -349,7 +349,7 @@ class CanvasManager{
         if (this.mouseIsDown){
             this.mouseIsDown = false;
             if (this.mouseDownPos.x === x && this.mouseDownPos.y === y){
-            displayPropertiesPanel(x,y);
+            displayPropertiesPanel(x,y,this.currObj);
             }
             
         }
@@ -380,15 +380,8 @@ class CanvasManager{
             canMan.selectedItem = e.target.value;
         });
     });
-    // GLOBAL FUNCTIONS TO HANDLE PROPERTIES PANEL
-    window.displayPropertiesPanel = function(x,y){
-        propertiesPanel.style.display = "flex";
-        propertiesPanel.style.top = y + "px";
-        propertiesPanel.style.left = (x + 5) + "px";
-    }
-    window.removePropertiesPanel = function(){
-        propertiesPanel.style.display = "none";
-    }
+
+
 
     //PROPERTIES PANEL EVENTS
     let strokeColor = document.getElementById("stroke-color");
@@ -408,6 +401,31 @@ class CanvasManager{
     fillColor.addEventListener("input",e => {
         canMan.currObj.properties.fillColor = e.target.value;
     })
+    function clearProperties(){
+        strokeColor.value = "#";
+        strokeSize.value = 1;
+        letFill.checked = false;
+        fillColor.value = "#";
+    }
+    function addProperties(prop){
+        strokeColor.value = prop.strokeColor;
+        strokeSize.value = prop.strokeSize;
+        letFill.checked = prop.isFill;
+        fillColor.value = prop.fillColor;
+    }
+
+    // GLOBAL FUNCTIONS TO HANDLE PROPERTIES PANEL
+    window.displayPropertiesPanel = function(x,y,properties){
+        addProperties(properties.properties);
+        propertiesPanel.style.display = "flex";
+        propertiesPanel.style.top = y + "px";
+        propertiesPanel.style.left = (x + 5) + "px";
+    }
+    window.removePropertiesPanel = function(){
+        clearProperties();
+        propertiesPanel.style.display = "none";
+    }
+
 
     //CANVAS EVENT LISTENERS
     canvas.addEventListener("mousedown",e => {
@@ -420,5 +438,6 @@ class CanvasManager{
     canvas.addEventListener("mouseup",e => {
         canMan.processMouseUp(e.clientX,e.clientY);
     });
+    
 
 })();
